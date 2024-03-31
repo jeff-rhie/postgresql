@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Memos</title>
+</head>
+<body>
+    <h1>User Memos</h1>
+    <form id="memoForm">
+        <textarea id="memoContent" placeholder="Write your memo here..."></textarea>
+        <button type="submit">Submit Memo</button>
+    </form>
+    <h2>Your Memos</h2>
+    <div id="memosContainer"></div>
+    
+    <script>
+        const userId = window.location.pathname.split('/')[2]; // Extract userId from URL
+        
+        document.getElementById('memoForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const content = document.getElementById('memoContent').value;
+            
+            try {
+                await fetch(`/user/${userId}/memos`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content }),
+                });
+                
+                document.getElementById('memoContent').value = ''; // Clear textarea
+                loadMemos(); // Reload memos to display the new one
+            } catch (error) {
+                console.error('Failed to submit memo', error);
+            }
+        });
+        
+        async function loadMemos() {
+            try {
+                const response = await fetch(`/user/${userId}/memos`);
+                const memos = await response.json();
+                
+                const memosContainer = document.getElementById('memosContainer');
+                memosContainer.innerHTML = ''; // Clear existing memos
+                
+                memos.forEach(memo => {
+                    const memoElement = document.createElement('div');
+                    memoElement.textContent = memo.content;
+                    memosContainer.appendChild(memoElement);
+                });
+            } catch (error) {
+                console.error('Failed to load memos', error);
+            }
+        }
+        
+        loadMemos(); // Load memos when the page loads
+    </script>
+</body>
+</html>
