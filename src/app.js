@@ -6,11 +6,21 @@ const prisma = new PrismaClient();
 const app = express();
 const PORT = 3000;
 
+const redis = require('redis');
+const redisClient = redis.createClient({
+  url: 'redis://localhost:6379' // This is the default Redis URL
+});
+redisClient.connect().catch(console.error);
+
+const memoRoutes = require('./routes/memoRoutes'); // Import memoRoutes
+const memoController = require('./controllers/memoController'); // Import memoController
+app.use('/memos', memoRoutes);
+
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Serve the signup and login form
 app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/views/index.html'); // Adjust the path according to your file structure
+  res.sendFile(__dirname + '/../views/index.html'); 
 });
 
 
@@ -48,37 +58,36 @@ app.post('/login', async (req, res) => {
   const user = await prisma.user.findUnique({ where: { email } });
 
   if (!user) {
-    return res.send('User not found. Please try again.'); // Direct response
+    return res.send('User not found. Please try again.');
   }
 
   const isPasswordValid = await bcrypt.compare(password, user.password);
   if (isPasswordValid) {
-    // Successful login
-    await prisma.user.update({
-      where: { email },
-      data: { loginAttempts: 0 },
-    });
-    res.send('Login successful. Welcome back!'); // Direct response
+    // Reset failed attempts on successful login
+    await redisClient.del(`loginAttempts:${email}`);
+    res.send('Login successful. Welcome back!');
   } else {
-    // Failed login
-    let attemptsLeft = 2 - user.loginAttempts;
+    // Increment failed login attempts
+    const attemptsKey = `loginAttempts:${email}`;
+    const currentAttempts = parseInt(await redisClient.get(attemptsKey)) || 0;
+    const newAttempts = currentAttempts + 1;
+    await redisClient.set(attemptsKey, newAttempts, {
+      EX: 3600 // Expires in 1 hour
+    });
+
+    let attemptsLeft = 3 - newAttempts;
     if (attemptsLeft <= 0) {
-      // Reset password after 3 failed attempts
+      // Reset password logic
       const newPassword = Math.random().toString(36).slice(-8);
       await prisma.user.update({
         where: { email },
         data: {
           password: await bcrypt.hash(newPassword, 10),
-          loginAttempts: 0,
         },
       });
+      await redisClient.del(attemptsKey); // Reset attempts after action
       res.send(`기회를 모두 소진하여, 새로운 비밀번호는 ${newPassword}로 설정되었습니다.`);
     } else {
-      // Increment failed login attempt
-      await prisma.user.update({
-        where: { email },
-        data: { loginAttempts: { increment: 1 } },
-      });
       res.send(`잘못된 비밀번호를 입력하였습니다. 이제 기회는 ${attemptsLeft}번 남았습니다.`);
     }
   }

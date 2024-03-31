@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Signup and Login</title>
+    <title>Signup, Login, and Memo Upload</title>
 </head>
 <body>
-    <div id="message"></div> <!-- Message will be displayed here -->
+    <div id="message"></div>
     <h2>Signup</h2>
-    <form action="/signup" method="post">
+    <form id="signupForm">
         <label for="signup-email">Email:</label>
         <input type="email" id="signup-email" name="email" required>
         <label for="signup-password">Password:</label>
@@ -17,20 +17,24 @@
     </form>
 
     <h2>Login</h2>
-    <form action="/login" method="post">
+    <form id="loginForm">
         <label for="login-email">Email:</label>
         <input type="email" id="login-email" name="email" required>
         <label for="login-password">Password:</label>
         <input type="password" id="login-password" name="password" required>
         <button type="submit">Login</button>
     </form>
+
+    <h2>Upload Memo</h2>
+    <form id="memoForm">
+        <textarea id="memoContent" placeholder="Write your memo here..."></textarea>
+        <button type="submit">Upload Memo</button>
+    </form>
+
+    <h2>Your Memos</h2>
+    <div id="memos"></div>
+
+    <script src="/public/js/main.js"></script>
 </body>
-<script>
-    // Parse URL query parameters
-    const params = new URLSearchParams(window.location.search);
-    const msg = params.get('msg');
-    if (msg) {
-        document.getElementById('message').textContent = msg;
-    }    
-</script>
 </html>
+
